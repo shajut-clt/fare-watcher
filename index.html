@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fare Watcher</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1a1d21;--muted:#6b7280;--line:#e3e6ea;--accent:#0b6bcb;--hot:#d92d20}
+@media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b1f25;--text:#e8eaed;--muted:#9aa3ad;--line:#2b313a;--accent:#5aa9ff;--hot:#ff6b5e}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--text)}
+main{max-width:760px;margin:0 auto;padding:20px 16px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 16px;font-size:14px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+input,select{padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit}
+input{flex:1;min-width:160px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.card.hot{border-left:4px solid var(--hot)}
+.meta{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:4px;flex-wrap:wrap}
+.tag{color:var(--hot);font-weight:600}.title{font-weight:600}
+a{color:var(--accent);text-decoration:none;font-size:14px}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+</style></head><body><main>
+<h1>Fare Watcher</h1>
+<p class="sub" id="sub">Loading…</p>
+<div class="bar">
+<input id="q" placeholder="Search city or airline…">
+<select id="f"><option value="all">All deals</option><option value="mistake">Mistake fares only</option></select>
+</div>
+<div id="list"></div>
+<script>
+let deals=[];
+const $=id=>document.getElementById(id);
+function ago(ts){const m=Math.max(1,Math.round((Date.now()/1000-ts)/60));
+ if(m<60)return m+" min ago";const h=Math.round(m/60);return h<24?h+" h ago":Math.round(h/24)+" d ago";}
+function render(){
+ const q=$("q").value.toLowerCase(),f=$("f").value,list=$("list");list.textContent="";
+ const rows=deals.filter(d=>(f==="all"||d.is_mistake)&&d.title.toLowerCase().includes(q));
+ if(!rows.length){const e=document.createElement("div");e.className="empty";e.textContent="No deals yet. New ones appear here as they are found.";list.append(e);return;}
+ rows.forEach(d=>{
+  const c=document.createElement("div");c.className="card"+(d.is_mistake?" hot":"");
+  const m=document.createElement("div");m.className="meta";
+  if(d.is_mistake){const t=document.createElement("span");t.className="tag";t.textContent="MISTAKE FARE";m.append(t);}
+  [d.source,"found "+ago(d.found_at)].forEach(s=>{const x=document.createElement("span");x.textContent=s;m.append(x);});
+  const t=document.createElement("div");t.className="title";t.textContent=d.title;
+  const a=document.createElement("a");a.href=d.link;a.target="_blank";a.rel="noopener";a.textContent="View deal →";
+  c.append(m,t,a);list.append(c);});
+}
+fetch("deals.json?"+Date.now()).then(r=>r.json()).then(d=>{deals=d;
+ $("sub").textContent=d.length+" deals tracked. Page shows the latest check.";render();})
+ .catch(()=>{$("sub").textContent="No data yet. Run the watcher once first.";render();});
+$("q").oninput=render;$("f").onchange=render;
+</script></main></body></html>
